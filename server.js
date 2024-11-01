@@ -1,44 +1,52 @@
-// server.js
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
+const socketIo = require('socket.io');
+const { v4: uuidv4 } = require('uuid'); // To generate unique IDs
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*", // Adjust based on security requirements
-  },
+const io = socketIo(server);
+
+app.get('/', (req, res) => {
+  res.send('Video Call Server Running');
 });
 
+// Create a new room with a unique ID
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  console.log('New client connected');
 
   socket.on('join-room', (roomId) => {
     socket.join(roomId);
-    console.log("user joined",roomId);
-    socket.to(roomId).emit('user-joined', socket.id);
+    console.log(`Client joined room: ${roomId}`);
   });
 
+  // Other socket events for offer, answer, and ICE candidates
   socket.on('offer', (data) => {
-    io.to(data.target).emit('offer', { sdp: data.sdp, sender: socket.id });
+    socket.to(data.target).emit('offer', {
+      sdp: data.sdp,
+      sender: socket.id,
+    });
   });
 
   socket.on('answer', (data) => {
-    io.to(data.target).emit('answer', { sdp: data.sdp, sender: socket.id });
+    socket.to(data.target).emit('answer', {
+      sdp: data.sdp,
+      sender: socket.id,
+    });
   });
 
   socket.on('ice-candidate', (data) => {
-    io.to(data.target).emit('ice-candidate', { candidate: data.candidate, sender: socket.id });
+    socket.to(data.target).emit('ice-candidate', {
+      candidate: data.candidate,
+      sender: socket.id,
+    });
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-    socket.broadcast.emit('user-disconnected', socket.id);
+    console.log('Client disconnected');
   });
 });
 
-const PORT = 5055; // port
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+server.listen(3173, () => {
+  console.log('Listening on port 3000');
 });
